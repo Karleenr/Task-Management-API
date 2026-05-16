@@ -14,7 +14,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 5
     networks:
       - task-network
     restart: unless-stopped
@@ -62,13 +62,13 @@ services:
       - task-network
     restart: unless-stopped
 
-  alloy:
-    image: grafana/alloy:latest
-    container_name: task-alloy
+  promtail:
+    image: grafana/promtail:latest
+    container_name: task-promtail
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./config/alloy-config.yaml:/etc/alloy/config.alloy:ro
-    command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
+      - ./config/promtail-config.yaml:/etc/promtail/config.yml:ro
+    command: -config.file=/etc/promtail/config.yml
     networks:
       - task-network
     depends_on:
