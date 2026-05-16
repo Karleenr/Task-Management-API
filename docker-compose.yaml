@@ -19,7 +19,6 @@ services:
       - task-network
     restart: unless-stopped
 
-
   redis:
     image: redis:7-alpine
     container_name: task-redis
