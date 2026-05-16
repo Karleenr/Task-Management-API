@@ -1,6 +1,7 @@
 stages:
   - test
   - build
+  - publish
   - deploy
 
 variables:
@@ -18,6 +19,7 @@ test:
     - pytest tests/ -v
   only:
     - develop
+    - main
 
 build:
   stage: build
@@ -28,10 +30,24 @@ build:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
     - docker build -t $DOCKER_IMAGE -t $DOCKER_IMAGE_LATEST .
+  only:
+    - develop
+    - main
+
+publish:
+  stage: publish
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
     - docker push $DOCKER_IMAGE
     - docker push $DOCKER_IMAGE_LATEST
   only:
-    - develop
+    - main
+  needs:
+    - build
 
 deploy:
   stage: deploy
@@ -50,6 +66,7 @@ deploy:
         docker compose up -d --force-recreate
       "
   only:
-    - develop
+    - main
   needs:
-    - build
+    - publish
+  when: manual
