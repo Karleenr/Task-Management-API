@@ -1,0 +1,72 @@
+stages:
+  - test
+  - build
+  - publish
+  - deploy
+
+variables:
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  DOCKER_IMAGE_LATEST: $CI_REGISTRY_IMAGE:latest
+
+test:
+  stage: test
+  image: python:3.11
+  before_script:
+    - apt-get update && apt-get install -y gcc libpq-dev
+    - pip install aiosqlite
+    - pip install -r requirements.txt
+  script:
+    - pytest tests/ -v
+  only:
+    - develop
+    - main
+
+build:
+  stage: build
+  image: docker:latest 
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $DOCKER_IMAGE -t $DOCKER_IMAGE_LATEST .
+  only:
+    - develop
+    - main
+
+publish:
+  stage: publish
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker push $DOCKER_IMAGE
+    - docker push $DOCKER_IMAGE_LATEST
+  only:
+    - main
+  needs:
+    - build
+
+deploy:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client docker-compose
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H "$DEPLOY_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
+  script:
+    - ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_SERVER "
+        cd /opt/task-api &&
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+        docker compose pull &&
+        docker compose up -d --force-recreate
+      "
+  only:
+    - main
+  needs:
+    - publish
+  when: manual
