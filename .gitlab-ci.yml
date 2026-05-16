@@ -1,5 +1,5 @@
 stages:
-  - test
+  # - test
   - build
   - publish
   - deploy
@@ -48,6 +48,7 @@ publish:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
     - docker load -i image.tar
+    - docker tag $DOCKER_IMAGE $DOCKER_IMAGE_LATEST
     - docker push $DOCKER_IMAGE
     - docker push $DOCKER_IMAGE_LATEST
   only:
