@@ -33,6 +33,7 @@ build:
   only:
     - develop
 
+
 deploy:
   stage: deploy
   image: alpine:latest
