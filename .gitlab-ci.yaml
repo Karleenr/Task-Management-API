@@ -19,9 +19,10 @@ test:
   only:
     - develop
 
+
 build:
   stage: build
-  image: docker:latest
+  image: docker:latest 
   services:
     - docker:dind
   before_script:
