@@ -3,20 +3,21 @@ services:
     image: postgres:15-alpine
     container_name: task-postgres
     environment:
-      POSTGRES_DB: tasksdb                    
-      POSTGRES_USER: user                    
-      POSTGRES_PASSWORD: pass
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d tasksdb"]  
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10
     networks:
       - task-network
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -30,15 +31,16 @@ services:
       retries: 5
     networks:
       - task-network
+    restart: unless-stopped
 
   app:
     build: .
     container_name: task-app
     ports:
-      - "8000:8000"
+      - "${APP_PORT}:8000"
     environment:
-      LOG_LEVEL: INFO
-      DATABASE_URL: postgresql+asyncpg://user:pass@postgres:5432/tasksdb
+      LOG_LEVEL: ${LOG_LEVEL}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_HOST: redis
       REDIS_PORT: 6379
     depends_on:
@@ -48,9 +50,49 @@ services:
         condition: service_healthy
     networks:
       - task-network
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: task-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - task-network
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: task-alloy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/alloy-config.yaml:/etc/alloy/config.alloy:ro
+    command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
+    networks:
+      - task-network
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: task-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - task-network
+    depends_on:
+      - loki
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  grafana_data:
 
 networks:
   task-network:
