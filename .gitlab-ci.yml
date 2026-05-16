@@ -1,6 +1,3 @@
-default:
-  tags: karleenr
-
 stages:
   - test
   - build
