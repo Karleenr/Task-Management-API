@@ -23,13 +23,18 @@ test:
 
 build:
   stage: build
-  image: docker:latest 
+  image: docker:latest
   services:
     - docker:dind
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
     - docker build -t $DOCKER_IMAGE -t $DOCKER_IMAGE_LATEST .
+    - docker save $DOCKER_IMAGE -o image.tar
+  artifacts:
+    paths:
+      - image.tar
+    expire_in: 1 hour
   only:
     - develop
     - main
@@ -42,9 +47,12 @@ publish:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
+    - docker load -i image.tar
+    - docker tag $DOCKER_IMAGE $DOCKER_IMAGE_LATEST
     - docker push $DOCKER_IMAGE
     - docker push $DOCKER_IMAGE_LATEST
   only:
+    - develop
     - main
   needs:
     - build
@@ -67,6 +75,7 @@ deploy:
       "
   only:
     - main
+    - develop
   needs:
     - publish
   when: manual
