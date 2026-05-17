@@ -52,7 +52,6 @@ publish:
     - docker push $DOCKER_IMAGE
     - docker push $DOCKER_IMAGE_LATEST
   only:
-    - develop
     - main
   needs:
     - build
@@ -75,7 +74,6 @@ deploy:
       "
   only:
     - main
-    - develop
   needs:
     - publish
   when: manual
