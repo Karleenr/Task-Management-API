@@ -117,7 +117,8 @@ http://localhost:3000
 |--------|----------|
 | `test` | Запуск pytest tests/ |
 | `build` | Сборка Docker-образа |
-| `deploy` | Публикация в GitLab Registry + деплой на сервер |
+| `publish` | Публикация в GitLab Registry |
+| `deploy` |  Деплой на сервер |
 
 
 
@@ -154,8 +155,15 @@ mkdir -p /opt/task-api/config
 
 scp docker-compose.yaml user@server:/opt/task-api/
 scp config/promtail-config.yaml user@server:/opt/task-api/config/
+scp scp -r config/grafana/provisioning user@server:/opt/task-api/config/
 scp .env user@server:/opt/task-api/
 ```
+### ⚠️ Важно: отличие серверного `docker-compose.yaml` от локального
+
+| Локально (разработка) | На сервере (production) |
+|----------------------|------------------------|
+| Использует `build: .` | Использует `image: registry.gitlab.com/...` |
+| Собирает образ из локального Dockerfile | Тянет готовый образ из GitLab Registry |
 
 ## 🧪 Тестирование
 
